@@ -6,7 +6,7 @@ import mediapipe as mp
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
-# YOLOv3 Tiny 초기화"D:\ICARE\I-CARE-AI\video_feedback\weights\yolov3.weights"
+# YOLOv3 Tiny 초기화 "D:\ICARE\I-CARE-AI\video_feedback\weights\yolov3.weights"
 net = cv2.dnn.readNet("video_feedback/weights/yolov3-tiny.weights", "video_feedback/config/yolov3-tiny.cfg")
 with open("video_feedback\data\coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
@@ -40,7 +40,7 @@ def detect_people(frame):
     return boxes
 
 # MediaPipe Pose 초기화
-pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.3, min_tracking_confidence=0.5)
 
 while cap.isOpened():
     ret, frame = cap.read()
