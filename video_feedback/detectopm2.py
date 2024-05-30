@@ -26,6 +26,8 @@ while cap.isOpened():
             x1, y1, x2, y2 = map(int, det[:4])
             person_img = frame[y1:y2, x1:x2]
 
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
             # MediaPipe BlazePose로 포즈 추정
             person_rgb = cv2.cvtColor(person_img, cv2.COLOR_BGR2RGB)
             result = pose.process(person_rgb)
