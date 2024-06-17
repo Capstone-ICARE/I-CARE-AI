@@ -20,7 +20,7 @@ def calculate_distance(point1, point2):
     return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
 # deque 초기화. keypoints를 최근 max_frames만큼 저장
-max_frames = 10
+max_frames = 5
 people_deque = deque(maxlen=max_frames)
 
 #웹캠이 열려 있는 동안 루프 실행. ret은 bool 타입으로 frame 성공적으로 읽었는지 여부
@@ -47,7 +47,7 @@ while cap.isOpened():
             if result.pose_landmarks:
                 landmarks = result.pose_landmarks.landmark
 
-                # 상대적인 좌표로 변환
+                # 상대좌표(0~1값) 구하고 절대좌표로 변환
                 left_wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST].x * (x2 - x1) + x1, 
                               landmarks[mp_pose.PoseLandmark.LEFT_WRIST].y * (y2 - y1) + y1]
                 right_wrist = [landmarks[mp_pose.PoseLandmark.RIGHT_WRIST].x * (x2 - x1)+ x1, 
@@ -72,7 +72,7 @@ while cap.isOpened():
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     # 하이파이브 동작 인식
-    threshold = 50
+    threshold = 40
     # Add current frame keypoints to deque
     if people:  # Ensure we only append if there are people detected
         people_deque.append(people)
@@ -86,11 +86,14 @@ while cap.isOpened():
                 for k in range(max_frames):
                     dist_left = calculate_distance(people_deque[k][i][0], people_deque[k][j][0])
                     dist_right = calculate_distance(people_deque[k][i][1], people_deque[k][j][1])
-                    shoulders_distance = calculate_distance(people_deque[k][i][2], people_deque[k][j][2])
+                    dist_lr = calculate_distance(people_deque[k][i][0], people_deque[k][j][1])
+                    dist_rl = calculate_distance(people_deque[k][i][1], people_deque[k][j][0])
                     
-                    if not ((dist_left < threshold or dist_right < threshold) and 
+                    # shoulders_distance = calculate_distance(people_deque[k][i][2], people_deque[k][j][2])
+                    
+                    if not ((dist_left < threshold or dist_right < threshold or dist_lr < threshold or dist_rl <threshold) and 
                             (people_deque[k][i][0][1] < people_deque[k][i][2][1] and 
-                             people_deque[k][j][0][1] < people_deque[k][j][2][1])):
+                            people_deque[k][j][0][1] < people_deque[k][j][2][1])):
                         high_five_detected = False
                         break
 
