@@ -6,10 +6,12 @@ import numpy as np
 import cv2
 import mediapipe as mp
 import matplotlib.pyplot as plt
+from imgaug import augmenters as iaa
 
 # MediaPipe 초기화
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose()
+#pose = mp_pose.Pose()
+pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5) 
 
 # 원본 데이터를 저장할 디렉토리 경로
 RAW_DIR = os.path.normpath('./action_recognition/data/raw')
@@ -67,52 +69,7 @@ keypoint_mapping = {
     26: 'RightLeg', # 22: 26, 
     28: 'RightFoot' # 23: 28  
 }
-# keypoint_mapping = {
-#     'Nose': 0, # 3: 0,   
-#     'LeftArm': 11, # 12: 11,  
-#     'LeftForeArm': 13, # 13: 13, 
-#     'LeftHand': 15, # 14: 15, 
-#     'RightArm': 12, # 17: 12, 
-#     'RightForeArm': 14, # 18: 14, 
-#     'RightHand': 16, # 19: 16,
-#     'LeftUpLeg': 23, # 26: 23, 
-#     'LeftLeg': 25, # 27: 25, 
-#     'LeftFoot': 27,# 28: 27, 
-#     'RightUpLeg': 24, # 21: 24, 
-#     'RightLeg': 26, # 22: 26, 
-#     'RightFoot': 28 # 23: 28  
-# }
 
-# keypoint_mapping = {
-#     'Nose': 'nose', # 3: 0,   
-#     'LeftArm': 'left_shoulder', # 12: 11,  
-#     'LeftForeArm': 'left_elbow', # 13: 13, 
-#     'LeftHand': 'left_wrist', # 14: 15, 
-#     'RightArm': 'right_shoulder', # 17: 12, 
-#     'RightForeArm': 'right_elbow', # 18: 14, 
-#     'RightHand': 'right_wrist', # 19: 16,
-#     'LeftUpLeg': 'left_hip', # 26: 23, 
-#     'LeftLeg': 'left_knee', # 27: 25, 
-#     'LeftFoot': 'left_ankle' ,# 28: 27, 
-#     'RightUpLeg': 'right_hip', # 21: 24, 
-#     'RightLeg': 'right_knee', # 22: 26, 
-#     'RightFoot': 'right_ankle' # 23: 28  
-# }
-
-# def map_keypoints(old_keypoints, keypoint_mapping, num_keypoints=33):
-#     new_keypoints = np.full((num_keypoints, 2), np.nan)  # NaN으로 초기화
-#     if isinstance(old_keypoints, list):
-#         for idx, (x, y) in enumerate(old_keypoints):
-#             if idx in keypoint_mapping.values():
-#                 new_keypoints[idx] = [x, y]
-#     elif isinstance(old_keypoints, dict):
-#         for old_key, coords in old_keypoints.items():
-#             if old_key in keypoint_mapping:
-#                 new_idx = keypoint_mapping[old_key]
-#                 new_keypoints[new_idx] = [coords['x'], coords['y']]
-#     else:
-#         print("Unsupported keypoints format")
-#     return new_keypoints
 
 def map_keypoints(old_keypoints, keypoint_mapping, num_keypoints=33):
     #new_keypoints = np.full((num_keypoints, 2), np.nan)  # NaN으로 초기화
@@ -129,22 +86,46 @@ def map_keypoints(old_keypoints, keypoint_mapping, num_keypoints=33):
     return new_keypoints
 
 
+# 데이터 증강 설정 (imgaug)
+augmenter = iaa.Sequential([
+    iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 3.0))),
+    iaa.Fliplr(0.5),  # 좌우 반전
+    iaa.Affine(rotate=(-20, 20)),
+    iaa.Multiply((0.8, 1.2), per_channel=0.2)  # 밝기 조절
+])
+
+FRAME_INTERVAL = 30 
+
 # extracting and mapping keypoints 
 def process_video(video_path, keypoint_mapping):
     cap = cv2.VideoCapture(video_path)
     keypoints_list = [] # 각 프레임에서 추출된 매핑된 키포인트 저장
+    frame_count = 0
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        # MediaPipe를 사용하여 키포인트 추출
-        results = pose.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        if results.pose_landmarks:
-            old_keypoints = [(lm.x, lm.y) for lm in results.pose_landmarks.landmark]
-            new_keypoints = map_keypoints(old_keypoints, keypoint_mapping)
-            keypoints_list.append(new_keypoints)
+        if frame_count % FRAME_INTERVAL == 0:  # 설정된 프레임 간격마다 한 번씩
+
+            # data_augmentation
+            frame_aug = augmenter.augment_image(frame)
+
+            # 프레임 저장
+            frame_copy = frame_aug.copy()  # 프레임 복사 # 키프레임시각화 오류 해결
+            frame_file_name = f"{os.path.splitext(os.path.basename(video_path))[0]}_frame_{frame_count}.jpg"
+            frame_file_path = os.path.join(EXTRACTED_DIR, 'frames', frame_file_name)
+            cv2.imwrite(frame_file_path, frame_copy)
+
+            # MediaPipe를 사용하여 키포인트 추출 (증강된 프레임 사용)
+            results = pose.process(cv2.cvtColor(frame_aug, cv2.COLOR_BGR2RGB))
+            if results.pose_landmarks:
+                old_keypoints = [(lm.x, lm.y) for lm in results.pose_landmarks.landmark]
+                new_keypoints = map_keypoints(old_keypoints, keypoint_mapping)
+                keypoints_list.append(new_keypoints)
+
+        frame_count += 1
 
     cap.release()
     return keypoints_list
@@ -164,13 +145,6 @@ video_labels = {
     '(1)M099_F105_39_04-08.mp4': '혼내기',
 }
 
-    # 'M099_F105_37_01-02.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-03.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-04.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-05.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-06.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-07.mp4': '때리고 맞기',
-    # 'M099_F105_37_01-08.mp4': '때리고 맞기',
 
 def process_videos(video_dir, keypoint_mapping, video_labels):
     all_keypoints = []
@@ -291,16 +265,6 @@ if __name__ == "__main__":
 
     # 필요한 JSON 파일 목록
     target_files = [
-        #격려하기
-        # 'JSON(230728)/M099_F105/M099_F105_38_01/M099_F105_38_01-01/M099_F105_38_01-01_frame300.json'
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame450.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame600.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame900.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame1020.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame1440.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame1860.json',
-        # 'JSON(230728)\M099_F105\M099_F105_38_03\M099_F105_38_03-01\M099_F105_38_03-01_frame1890.json',
-
         #혼내기
         'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-01\M099_F105_39_01-01_frame660.json',
         'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-01\M099_F105_39_01-01_frame1140.json',
@@ -310,6 +274,62 @@ if __name__ == "__main__":
         'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-01\M099_F105_39_01-01_frame2100.json',
         'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-01\M099_F105_39_01-01_frame2130.json',
 
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame660.json'
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-02\M099_F105_39_01-02_frame2130.json',
+
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame660.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-03\M099_F105_39_01-03_frame2130.json',
+
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame660.json'
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-04\M099_F105_39_01-04_frame2130.json',
+
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame660.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-05\M099_F105_39_01-05_frame2130.json',
+
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame660.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-06\M099_F105_39_01-06_frame2130.json',
+
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame660.json'
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-07\M099_F105_39_01-07_frame2130.json',
+        
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame660.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame1140.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame1170.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame1380.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame1620.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame2100.json',
+        'JSON(230728)\M099_F105\M099_F105_39_01\M099_F105_39_01-08\M099_F105_39_01-08_frame2130.json',
+
         #위로하기
         'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-01\M099_F105_46_01-01_frame180.json',
         'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-01\M099_F105_46_01-01_frame630.json',
@@ -318,7 +338,63 @@ if __name__ == "__main__":
         'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-01\M099_F105_46_01-01_frame1530.json',
         'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-01\M099_F105_46_01-01_frame1980.json',
         'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-01\M099_F105_46_01-01_frame2040.json',
-    
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-02\M099_F105_46_01-02_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-03\M099_F105_46_01-03_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-04\M099_F105_46_01-04_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-05\M099_F105_46_01-05_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-06\M099_F105_46_01-06_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-07_frame2040.json',
+
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame180.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame630.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame1080.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame1320.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame1530.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame1980.json',
+        'JSON(230728)\M099_F105\M099_F105_46_01\M099_F105_46_01-07\M099_F105_46_01-08_frame2040.json',
+
     ]
 
     # 비디오 파일 디렉토리 경로
@@ -343,32 +419,6 @@ if __name__ == "__main__":
     np.savez_compressed('./action_recognition/preprocessed_data.npz', data=combined_data, labels=combined_labels)
     print("Combined data saved to ./action_recognition/preprocessed_data.npz")
 
-
-
-
-    # # 예제 이미지 경로 (사용자가 필요한 경우 경로를 수정할 수 있음)
-    # example_image_path = 'D:\standing.jpg'
-    # example_image = cv2.imread(example_image_path)
-    
-    # # # 첫 번째 샘플의 키포인트 시각화
-    # # example_keypoints = data[0]  # 첫 번째 샘플의 키포인트
-    # # visualize_keypoints(example_image, example_keypoints)
-    
-    # # 미디어파이프로 이미지에서 키포인트 추출
-    # results = pose.process(cv2.cvtColor(example_image, cv2.COLOR_BGR2RGB))
-    # if results.pose_landmarks:
-    #     mp_keypoints = np.array([(lm.x, lm.y) for lm in results.pose_landmarks.landmark])
-
-    #     # 미디어파이프로 인식한 키포인트 시각화
-    #     visualize_keypoints(example_image, mp_keypoints)
-
-    #     # 키포인트 값 검증
-    #     if check_keypoints_range(mp_keypoints, example_image.shape):
-    #         print("All keypoints are within the image bounds.")
-    #     else:
-    #         print("Some keypoints are out of the image bounds.")
-    # else:
-    #     print("No pose landmarks detected.")
     
 
 def visualize_keypoints_on_video(video_path, keypoints_list):
