@@ -4,3 +4,6 @@ myenv/
 # Ignore YOLO weights and other large files
 *.weights
 *.pyd
+
+# Data
+data/
