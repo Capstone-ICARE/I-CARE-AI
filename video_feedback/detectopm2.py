@@ -10,7 +10,7 @@ model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
 # MediaPipe BlazePose 초기화
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=1, min_detection_confidence=0.5)
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, min_detection_confidence=0.3)
 
 # 웹캠 열기
 cap = cv2.VideoCapture(0)
@@ -29,15 +29,18 @@ while cap.isOpened():
     if not ret:
         break
 
+    blurred_frame = cv2.GaussianBlur(frame, (5, 5), 0)
+
     # YOLOv5로 사람 감지
-    results = model(frame)
+    frame_resized = cv2.resize(blurred_frame, (640, 480))
+    results = model(frame_resized)
     detections = results.pred[0] # 감지된 객체 리스트
     people = [] # key point 저장할 리스트 초기화
     
     for det in detections:
         if det[5] == 0:  # person class
             x1, y1, x2, y2 = map(int, det[:4]) # bounding box 좌표 추출
-            person_img = frame[y1:y2, x1:x2]            
+            person_img = blurred_frame[y1:y2, x1:x2]           
             person_rgb = cv2.cvtColor(person_img, cv2.COLOR_BGR2RGB)
 
             # MediaPipe BlazePose로 포즈 추정
@@ -66,10 +69,10 @@ while cap.isOpened():
                     cv2.circle(person_img, (cx, cy), 5, (0, 255, 0), -1)
 
             # 감지된 사람을 원래 프레임에 표시
-            frame[y1:y2, x1:x2] = person_img
+            blurred_frame[y1:y2, x1:x2] = person_img
 
             # 바운딩 박스 그리기
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(blurred_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     # 하이파이브 동작 인식
     threshold = 40
@@ -101,12 +104,10 @@ while cap.isOpened():
                         break
                 
                 if high_five_detected:
-                    cv2.putText(frame, "High Five Detected!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+                    cv2.putText(blurred_frame, "High Five Detected!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
                     
-
-
     # 결과 프레임을 화면에 표시
-    cv2.imshow('Frame', frame)
+    cv2.imshow('Frame', blurred_frame)
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
