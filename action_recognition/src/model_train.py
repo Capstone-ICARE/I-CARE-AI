@@ -12,7 +12,16 @@ X = data['data']  # 입력 데이터
 y = data['labels']  # 라벨
 
 X_list = X.tolist()
-X_processed = [np.array(list(sample.values())) for sample in X_list]
+
+X_processed = []
+for sample in X_list:
+    person1_keypoints = list(sample[0].values())  # 첫 번째 사람의 키포인트
+    person2_keypoints = list(sample[1].values())  # 두 번째 사람의 키포인트
+    
+    # 두 사람의 키포인트를 하나의 배열로 결합
+    combined_keypoints = np.array(person1_keypoints + person2_keypoints)
+    X_processed.append(combined_keypoints)
+
 X = np.array(X_processed)
 
 # X 데이터 dtype 확인
