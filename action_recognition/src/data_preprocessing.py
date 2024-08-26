@@ -118,13 +118,13 @@ def process_video(video_path, keypoint_mapping):
             #frame_aug = augmenter.augment_image(frame)
 
             # YOLOv5로 사람 감지
-            frame_resized = cv2.resize(frame, (640, 480))
+            frame_resized = cv2.resize(frame, (320, 240))
             results = model(frame_resized)
             detections = results.pred[0]
 
             people_detected = 0
             people_with_pose = 0
-            frame_keypoints=[]
+            frame_keypoints=[] # 각 프레임에서 사람 2명 키포인트 저장
 
             # 탐지된 각 사람에 대해 MediaPipe Pose 적용
             for det in detections:
@@ -136,11 +136,10 @@ def process_video(video_path, keypoint_mapping):
                     h_original, w_original = frame.shape[:2]
 
                     # YOLO bounding box 좌표를 원래 프레임 크기로 변환
-                    x1 = int(x1 * (w_original / 640))
-                    x2 = int(x2 * (w_original / 640))
-                    y1 = int(y1 * (h_original / 480))
-                    y2 = int(y2 * (h_original / 480))
-
+                    x1 = int(x1 * (w_original / 320))
+                    x2 = int(x2 * (w_original / 320))
+                    y1 = int(y1 * (h_original / 240))
+                    y2 = int(y2 * (h_original / 240))
 
                     person_img = frame[y1:y2, x1:x2]
                     person_rgb = cv2.cvtColor(person_img, cv2.COLOR_BGR2RGB)
@@ -164,12 +163,15 @@ def process_video(video_path, keypoint_mapping):
                             cv2.circle(person_img, (cx, cy), 5, (0, 255, 0), -1)
 
                 if people_detected == 2 and people_with_pose == 2:
-                    keypoints_list.extend(frame_keypoints)
+                    #keypoints_list.extend(frame_keypoints)
+                    keypoints_tuple = (frame_keypoints[0], frame_keypoints[1])
+                    keypoints_list.append(keypoints_tuple)
+                    break
 
             # 결과를 화면에 표시
-            cv2.waitKey(1)
+            cv2.waitKey(5)
             cv2.imshow('Keypoints Visualization', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(5) & 0xFF == ord('q'):
             break
                     
     cap.release()
@@ -257,7 +259,7 @@ def process_videos(video_dir, keypoint_mapping, video_labels):
         # 비디오에서 키포인트 추출
         keypoints_list = process_video(video_path, keypoint_mapping)
 
-        # 라벨 추출 (파일 이름을 라벨로 사용하거나 다른 방법으로 라벨을 정의할 수 있습니다.)
+        # 라벨 추출
         label = video_labels.get(video_file, 'unknown')  # video_labels 딕셔너리에서 라벨을 가져옴
 
         # 키포인트와 라벨 저장
@@ -281,6 +283,8 @@ def load_and_preprocess_data(json_dir, keypoint_mapping, target_files):
                 try:
                     json_data = json.load(f)
                     sub_category = json_data['metaData']['sub category']  # sub category 추출
+                    
+                    data_tuple = ()
                     for annotation in json_data.get('annotation', []):
                         if annotation.get('pose', {}).get('type') == 'pose':
                             old_keypoints = annotation['pose']['location']
@@ -297,8 +301,11 @@ def load_and_preprocess_data(json_dir, keypoint_mapping, target_files):
                             new_keypoints = map_keypoints(old_keypoints_list, keypoint_mapping)
                             # 딕셔너리 값 (좌표 쌍)만 추출하여 NumPy 배열로 변환
                             keypoint_values = np.array(list(new_keypoints.values()))
-
-                            data.append(new_keypoints)
+                            data_tuple = data_tuple + (new_keypoints, )
+                            # data.append(new_keypoints)
+                            # labels.append(sub_category)
+                        if len(data_tuple) == 2:
+                            data.append(data_tuple)
                             labels.append(sub_category)
                             
                 except json.JSONDecodeError as e:
