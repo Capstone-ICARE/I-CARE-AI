@@ -1,0 +1,10 @@
+flask
+pandas
+transformers
+konlpy
+wordcloud
+torch
+scikit-learn
+sentencepiece
+fasttext-wheel
+wheel

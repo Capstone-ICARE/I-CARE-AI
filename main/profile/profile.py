@@ -3,10 +3,10 @@ from konlpy.tag import Okt
 from wordcloud import WordCloud
 from collections import Counter
 
-def create_wordcloud(diarys, file_name):
+def create_profile(diary, file_name):
     # 분석할 데이터 추출
     try:
-        text = re.sub(r'[^\w\n]', ' ', diarys)
+        text = re.sub(r'[^\w\n]', ' ', diary)
         stopwords = [
                 '오늘', '아주', '조금', '매우', '다음', '그때', '너무', '같이', '정말', '모두', '하루', '처음', '시간', '기분', '우리'
         ]
@@ -26,9 +26,9 @@ def create_wordcloud(diarys, file_name):
         fontPath = 'C:/windows/fonts/hmkmmag.ttf'
         
         wc = WordCloud(fontPath, background_color='white', width=800, height=600, max_words=25)
-        wordcloud = wc.generate_from_frequencies(wordCount)
+        profile = wc.generate_from_frequencies(wordCount)
     
-        wordcloud.to_file('./images/profile/' + file_name)
+        profile.to_file('./images/profile/' + file_name)
     
         return True
     except:
