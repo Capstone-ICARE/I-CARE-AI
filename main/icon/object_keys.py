@@ -74,7 +74,7 @@ class ObjectKeys:
         matched_keys_object = []
         predicted_keys_object = []
 
-        #sorted_nouns = self.sort_important_nouns(diary_content)
+        #sorted_nouns = self.sort_important_nouns(diary_content)\
 
         for key, word in self.loader.match_object.items():
             if key not in matched_keys_object:

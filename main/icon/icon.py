@@ -122,4 +122,3 @@ class Icon:
         #    return self.get_fonts(self.get_icon_ids(diary_content))
         #except:
         #    return False
-        

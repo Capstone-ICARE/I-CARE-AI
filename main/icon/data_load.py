@@ -59,7 +59,7 @@ class DataLoader:
             if word in duplicate_object_words:
                 duplicate_object_keys[word].append(key)
         return duplicate_object_keys
-    
+
     #def load_fasttext_model(self, path):
     #    model_path = path + 'cc.ko.300.bin'
     #    return fasttext.load_model(model_path)
