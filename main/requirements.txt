@@ -1,0 +1,11 @@
+flask
+pandas
+numpy==1.25.2
+transformers
+konlpy
+wordcloud
+torch
+scikit-learn
+sentencepiece
+fasttext-wheel
+wheel

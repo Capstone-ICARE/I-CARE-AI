@@ -1,10 +1,9 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv1D, MaxPooling1D, Flatten, Dense
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-
 
 # 데이터 로드
 data = np.load('./action_recognition/preprocessed_data.npz', allow_pickle=True)
@@ -15,69 +14,77 @@ X_list = X.tolist()
 
 X_processed = []
 for sample in X_list:
-    person1_keypoints = list(sample[0].values())  # 첫 번째 사람의 키포인트
-    person2_keypoints = list(sample[1].values())  # 두 번째 사람의 키포인트
+    X_sample = []
+    for frame in sample:
+        #print("Sample structure:", sample)
+        person1_keypoints = [x for keypoint in list(frame[0].values()) for x in keypoint]  # 첫 번째 사람의 키포인트
+        person2_keypoints = [x for keypoint in list(frame[1].values()) for x in keypoint]  # 두 번째 사람의 키포인트
+        combined_keypoints = person1_keypoints + person2_keypoints
+        X_sample.append(combined_keypoints)
+    X_processed.append(X_sample)
     
     # 두 사람의 키포인트를 하나의 배열로 결합
-    combined_keypoints = np.array(person1_keypoints + person2_keypoints)
-    X_processed.append(combined_keypoints)
+    #combined_keypoints = np.array(person1_keypoints + person2_keypoints)
+    #X_processed.append(combined_keypoints)
+    #print(X_processed)
 
-X = np.array(X_processed)
 
-# X 데이터 dtype 확인
-print(f"X dtype: {X.dtype}")
-print(f"y dtype: {y.dtype}")
+X = X_processed  
+#X = np.array(X_processed)
+
+
+
 
 # 레이블 인코딩
 label_encoder = LabelEncoder()
 y_encoded = label_encoder.fit_transform(y)
 
 # 데이터와 라벨 확인
-print(f"Features shape: {X.shape}")
-print(f"Labels shape: {y.shape}")
+#print(f"Features shape: {X.shape}")
+#print(f"Labels shape: {y.shape}")
 
-# 문자열 데이터 변환 (예: 숫자로 변환하거나 필요한 전처리 수행)
-if X.dtype.kind in {'U', 'S'}:  # unicode 또는 string 타입인지 확인
-    X = np.array([np.fromstring(x, dtype=np.float32, sep=',') for x in X])
+X = np.array(X)
+y_encoded = np.array(y_encoded)
 
-# x, y 좌표 데이터가 2D 배열 형태라고 가정하고 이를 3D 텐서로 변환
-# 예: X의 shape이 (num_samples, num_coords)
-X = X.reshape((X.shape[0], -1, 2))  # (num_samples, num_coords // 2, 2)
-
-# 데이터 정규화 (옵션)
-X = (X - np.min(X)) / (np.max(X) - np.min(X))  # 0과 1 사이로 정규화
-
-print(f"Labels: {y}")
-print(f"Labels shape: {y.shape}")
-
+# NumPy 배열로 변환된 이후의 데이터 형태 확인
+print("X shape after conversion:", X.shape)
+print("y_encoded shape after conversion:", y_encoded.shape)
 
 # 데이터 분리: 훈련 데이터와 테스트 데이터
-X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True)
+#X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True)
+try:
+    X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True)
+    print("X_train shape:", X_train.shape)
+    print("X_test shape:", X_test.shape)
+    print("y_train shape:", y_train.shape)
+    print("y_test shape:", y_test.shape)
+except ValueError as e:
+    print(f"Error during train_test_split: {e}")
+
 
 # 모델 정의
 model = Sequential([
-    Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(X.shape[1], X.shape[2])),
-    MaxPooling1D(pool_size=2),
-    Conv1D(filters=128, kernel_size=3, activation='relu'),
-    MaxPooling1D(pool_size=2),
-    Flatten(),
-    Dense(64, activation='relu'),
-    Dense(len(np.unique(y)), activation='softmax')  # 클래스 수에 따라 출력층 조정
+    LSTM(64, return_sequences=True, input_shape=(30, 52)),
+    LSTM(64, return_sequences=False),
+    Dense(32, activation='relu'),
+    Dropout(0.5),
+    Dense(len(np.unique(y)), activation='softmax')
 ])
 
 # 모델 컴파일
 model.compile(optimizer='adam',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy'])
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
 
 # 모델 요약
 model.summary()
-
+# X_train = np.array(X)
+# y_train = np.array(y_encoded)
 # 모델 훈련
-history = model.fit(X, y_encoded, epochs=10, batch_size=32, validation_split=0.2)
+history = model.fit(X_train, y_train, epochs=50, batch_size=2)
 model_path = './action_recognition/action_recognition_model.h5'
 model.save(model_path)
-print(f"Model saved to {model_path}")
+
 
 # 훈련 과정 시각화
 import matplotlib.pyplot as plt
