@@ -1,9 +1,6 @@
 flask
 pandas
-<<<<<<< HEAD
 numpy==1.25.2
-=======
->>>>>>> 7156bb63743c67538305b21e56b2609cf77f465f
 transformers
 konlpy
 wordcloud
