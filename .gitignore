@@ -9,5 +9,12 @@ __pycache__/
 
 # Data
 data/
+
+#Images
+images/
+
+webcam.py
+
 kobert/
 cc.ko.300.bin
+
