@@ -1,5 +1,7 @@
 # Ignore virtual environment directory
 myenv/
+venv/
+__pycache__/
 
 # Ignore YOLO weights and other large files
 *.weights
@@ -12,3 +14,7 @@ data/
 images/
 
 webcam.py
+
+kobert/
+cc.ko.300.bin
+
