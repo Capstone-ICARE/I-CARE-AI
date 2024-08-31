@@ -12,23 +12,30 @@ X = data['data']
 y = data['labels']
 
 X_list = X.tolist()
+
 X_processed = []
 for sample in X_list:
-    person1_keypoints = list(sample[0].values())  # 첫 번째 사람의 키포인트
-    person2_keypoints = list(sample[1].values())  # 두 번째 사람의 키포인트
-    
-    # 두 사람의 키포인트를 하나의 배열로 결합
-    combined_keypoints = np.array(person1_keypoints + person2_keypoints)
-    X_processed.append(combined_keypoints)
+    X_sample = []
+    for frame in sample:
+        #print("Sample structure:", sample)
+        person1_keypoints = [x for keypoint in list(frame[0].values()) for x in keypoint]  # 첫 번째 사람의 키포인트
+        person2_keypoints = [x for keypoint in list(frame[1].values()) for x in keypoint]  # 두 번째 사람의 키포인트
+        combined_keypoints = person1_keypoints + person2_keypoints
+        X_sample.append(combined_keypoints)
+    X_processed.append(X_sample)
 
-X = np.array(X_processed)
+X = X_processed  
 
 # 레이블 인코딩
 label_encoder = LabelEncoder()
 y_encoded = label_encoder.fit_transform(y)
 
-# x, y 좌표 데이터가 2D 배열 형태라고 가정하고 이를 3D 텐서로 변환
-X = X.reshape((X.shape[0], -1, 2))  # (num_samples, num_coords // 2, 2)
+X = np.array(X)
+y_encoded = np.array(y_encoded)
+
+# NumPy 배열로 변환된 이후의 데이터 형태 확인
+print("X shape after conversion:", X.shape)
+print("y_encoded shape after conversion:", y_encoded.shape)
 
 # 데이터 정규화 (옵션)
 X = (X - np.min(X)) / (np.max(X) - np.min(X))  # 0과 1 사이로 정규화
