@@ -4,7 +4,7 @@ from sklearn.preprocessing import LabelEncoder
 import matplotlib.pyplot as plt
 
 # 모델 경로
-MODEL_PATH = './action_recognition/action_recognition_model.h5'
+MODEL_PATH = './action_recognition/action_recognition_model_TEST1.h5'
 
 # 데이터 로드
 data = np.load('./action_recognition/preprocessed_data.npz', allow_pickle=True)
