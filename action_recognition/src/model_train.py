@@ -28,12 +28,8 @@ for sample in X_list:
     #X_processed.append(combined_keypoints)
     #print(X_processed)
 
-
 X = X_processed  
 #X = np.array(X_processed)
-
-
-
 
 # 레이블 인코딩
 label_encoder = LabelEncoder()
@@ -50,8 +46,6 @@ y_encoded = np.array(y_encoded)
 print("X shape after conversion:", X.shape)
 print("y_encoded shape after conversion:", y_encoded.shape)
 
-# 데이터 분리: 훈련 데이터와 테스트 데이터
-#X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True)
 try:
     X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42, shuffle=True)
     print("X_train shape:", X_train.shape)
@@ -64,10 +58,20 @@ except ValueError as e:
 
 # 모델 정의
 model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(30, 52)),
+    LSTM(128, return_sequences=True, input_shape=(30, 52)),
+    #Dropout(0.3),  
+    
+    LSTM(128, return_sequences=True),
+    #Dropout(0.3),  
+    
     LSTM(64, return_sequences=False),
+    #Dropout(0.3),  
+    
+    Dense(64, activation='relu'),
+    Dropout(0.4), 
     Dense(32, activation='relu'),
-    Dropout(0.5),
+    Dropout(0.4), 
+
     Dense(len(np.unique(y)), activation='softmax')
 ])
 
@@ -76,22 +80,35 @@ model.compile(optimizer='adam',
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
+from tensorflow.keras.callbacks import EarlyStopping
+# EarlyStopping 콜백 설정
+early_stopping = EarlyStopping(monitor='val_loss',  # 검증 손실을 모니터링
+                               patience=5,          # 성능 향상이 없을 때 기다리는 Epoch 수
+                               restore_best_weights=True)  # 가장 좋은 가중치로 복원
+
+
 # 모델 요약
 model.summary()
 # X_train = np.array(X)
 # y_train = np.array(y_encoded)
 # 모델 훈련
-history = model.fit(X_train, y_train, epochs=50, batch_size=2)
-model_path = './action_recognition/action_recognition_model.h5'
+history = model.fit(X_train, y_train,
+                    validation_data=(X_test, y_test),  
+                    epochs=60, 
+                    batch_size=32,  
+                    callbacks=[early_stopping])  
+
+
+model_path = './action_recognition/action_recognition_model_TEST1.h5'
 model.save(model_path)
 
 
 # 훈련 과정 시각화
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-plt.plot(history.history['accuracy'], label='Accuracy')
-plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.show()
+# plt.plot(history.history['accuracy'], label='Accuracy')
+# plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+# plt.xlabel('Epoch')
+# plt.ylabel('Accuracy')
+# plt.legend()
+# plt.show()
