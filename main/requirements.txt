@@ -9,3 +9,6 @@ scikit-learn
 sentencepiece
 fasttext-wheel
 wheel
+tensorflow
+mediapipe
+ultralytics
