@@ -372,9 +372,9 @@ def get_augment_data(keypoints_sequence, w, h):
         for (p1, p2) in keypoints_sequence: # [({'Nose': [x, y], 'LeftArm': [x, y], ...}, {}), ({}, {}), ({}, {})...]
             person1 = {}
             person2 = {}
-            for key, keypoints in p1:
+            for key, keypoints in p1.items():
                 person1[key] = transform(keypoints, **params)
-            for key, keypoints in p2:
+            for key, keypoints in p2.items():
                 person2[key] = transform(keypoints, **params)
             added_keypoints = (person1, person2)
             keypoints_seq.append(added_keypoints)
