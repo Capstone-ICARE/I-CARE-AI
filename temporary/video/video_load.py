@@ -39,7 +39,7 @@ class VideoLoader:
         self.end = False
         self.end2 = False
         self.frame_queue = queue.Queue()
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0) # vvv.mp4
         self.thread = threading.Thread(target=self.run_temp)
         self.thread.start()
         self.thread2 = threading.Thread(target=self.run)

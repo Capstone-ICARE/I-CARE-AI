@@ -88,17 +88,21 @@ def video_status():
             original_count = 0
             limit = 0
             while video.running:
+                time.sleep(3)
                 current_label = video.get_current_label()
+                if current_label is None:
+                    current_label = '-'
                 count = video.get_label_count()
                 if original_count == count:
                     limit += 1
-                    if limit >= 4:
+                    if limit == 4:
+                        current_label = '-'
+                    elif limit > 4:
                         continue
                 else:
                     limit = 0
-                yield f"data: {json.dumps({'currentLabel': current_label})}\n\n"
                 original_count = count
-                time.sleep(4)
+                yield f"data:{json.dumps({'currentLabel': current_label})}\n\n"
     return Response(generate(video), mimetype='text/event-stream')
 
 @app.route('/video/stream')

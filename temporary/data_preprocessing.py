@@ -424,11 +424,11 @@ def process_video(video_path, keypoint_mapping, sequence_length=30):
     keypoints_sequence = [] # 각 프레임에서 추출된 매핑된 키포인트 저장
     frame_count = 0
 
-    while cap.isOpened() and len(keypoints_sequence) < sequence_length:
+    while cap.isOpened(): # and len(keypoints_sequence) < sequence_length
         ret, frame = cap.read()
         if not ret:
             break
-
+        temp_frame = frame
         # 매 'process_interval' 프레임마다 처리
         if frame_count % interval == 0:
             frame_keypoints = process_frame(frame, keypoint_mapping)
@@ -439,21 +439,29 @@ def process_video(video_path, keypoint_mapping, sequence_length=30):
 
     cap.release()
 
-    h, w = frame.shape[:2]
-    augment_sequence_list = get_augment_data(keypoints_sequence, w, h)
     new_sequence_list = []
+    if len(keypoints_sequence) == 0:
+        return 0
+    
+    h, w = temp_frame.shape[:2]
+    augment_sequence_list = get_augment_data(keypoints_sequence, w, h)
 
     for sequence in augment_sequence_list:
         if len(sequence) == 0:
             return 0
         # 시퀀스 길이 표준화
-        if len(sequence) < sequence_length:
-            sequence = pad_sequence(sequence, sequence_length)
-        elif len(sequence) > sequence_length:
-            sequence = sequence[:sequence_length]
-        new_sequence_list.append(sequence)
+        for i in range(0, len(sequence), sequence_length):
+            chunk = sequence[i:i + sequence_length]
+            if len(chunk) < sequence_length:
+                for i in range(sequence_length - len(chunk)):
+                    chunk.append(chunk[-(i + 1)])
+            new_sequence_list.append(chunk)
+        #if len(sequence) < sequence_length:
+        #    sequence = pad_sequence(sequence, sequence_length)
+        #elif len(sequence) > sequence_length:
+        #    sequence = sequence[:sequence_length]
+        #new_sequence_list.append(sequence)
     return new_sequence_list
-
 
 def process_frame(frame, keypoint_mapping):
     # data_augmentation
@@ -530,18 +538,18 @@ def process_videos(video_dir, keypoint_mapping, video_labels):
     all_sequences = []
     all_labels = []
 
-    # target_videos = [
-
+    target_videos = [
+        'vvv.mp4'
     #     'M099_F105_38_03-01.mp4',
     #     'M099_F105_38_03-02.mp4',
     #     # 'M099_F105_39_02-01.mp4',
     #     # 'M099_F105_39_02-02.mp4'
-    # ]
+    ]
 
     # 비디오 파일 목록
-    video_files = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]
-    #video_files = [f for f in os.listdir(video_dir) if f in target_videos]
-
+    #video_files = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]
+    video_dir = '.'
+    video_files = [f for f in os.listdir(video_dir) if f in target_videos]
 
     for video_file in video_files:
         video_path = os.path.join(video_dir, video_file)
@@ -549,10 +557,12 @@ def process_videos(video_dir, keypoint_mapping, video_labels):
 
         # 비디오에서 키포인트 추출
         sequence_list = process_video(video_path, keypoint_mapping, sequence_length=30)
+        if sequence_list == 0:
+            continue
         # 라벨 추출
         label = video_labels.get(video_file, 'unknown')  # video_labels 딕셔너리에서 라벨을 가져옴
         for sequence in sequence_list:
-            if sequence == 0:
+            if len(sequence) == 0:
                 continue
             # 키포인트와 라벨 저장
             all_sequences.append(sequence)
