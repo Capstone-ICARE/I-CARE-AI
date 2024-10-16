@@ -70,7 +70,7 @@ def video_status():
                 yield f"data:{json.dumps({'currentLabel': current_label})}\n\n"
     return Response(generate(video), mimetype='text/event-stream')
 
-@app.route('/video/stream')
+@app.route('/video/stream', methods=['GET'])
 def video_stream():
     child_id = request.args.get('childId')
     video = child_videos.get(child_id)
