@@ -11,15 +11,15 @@ class Gesture:
     self.gesture_label_encoder = gesture_label_encoder
     self.desired_landmarks = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
     self.labels = {
-      '손잡고 하트 만들기': 'hint.jpg',
-      '두 손 맞닿기': 'hint.jpg',
-      '손잡고 등 근육 늘리기': 'hint.jpg',
-      '뒤돌아 손잡고 가슴 펴기': 'hint.jpg',
-      '손바닥 맞대고 발 뒤로 들기': 'hint.jpg',
-      '한 명만 뒤돌아 가슴 펴기': 'hint.jpg',
-      '숙여서 두손 잡기': 'hint.jpg',
-      '쌍둥이 나무 만들기': 'hint.jpg',
-      '등 맞대고 앉기': 'hint.jpg'
+      '옆구리 늘리기': 'hint.jpg',
+      '마주보고 두 손바닥 맞대기': 'normal.jpg',
+      '서로 등지고 양손잡고 잡아당기기': 'answer.jpg',
+      '마주보고 손바닥 맞대고 발 뒤로 들기': 'gesture04.jpg',
+      '등 맞대고 앉기(스쿼트)': 'gesture05.jpg',
+      '정면보고 손잡고 발바닥 맞대기': 'answer.jpg',
+      '안마하기': 'hint.jpg',
+      '마주보고 손잡고 발목잡고 뒤로 당기기': 'normal.jpg',
+      #'팔하트': 'answer.jpg'
     }
     self.cor_label = random.choice(list(self.labels.keys()))
     self.check = False
@@ -59,6 +59,7 @@ class Gesture:
     X_keypoints = np.array([np.array(frame_keypoints).flatten()])
     prediction = self.gesture_model.predict(X_keypoints)
     predicted_label = self.gesture_label_encoder.inverse_transform([np.argmax(prediction)])[0]
+    print(predicted_label)
     if self.cor_label == predicted_label:
       if self.check:
         frame_path = self.generate_unique_filename(directory)
@@ -89,7 +90,7 @@ class Gesture:
         return file_path
       
   def process_frame(self, current_frame):
-    W, H = 640, 480
+    W, H = 640, 640
     keypoints = []
     image = current_frame
     image_resized = cv2.resize(image, (W, H))

@@ -177,6 +177,7 @@ def get_hint_image():
     if camera:
         hint_path = camera.get_hint_path()
         if os.path.exists(hint_path):
+            print(f'Hint : {hint_path}')
             return send_file(hint_path, mimetype='image/jpeg')
         else:
             return "Hint image not found", 404

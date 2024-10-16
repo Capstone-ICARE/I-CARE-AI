@@ -9,16 +9,22 @@ class Camera:
     self.running = False
     self.thread = None
     self.current_frame = None
+    self.predict_frame = None
     self.cap = None
     self.end = False
+    self.cam_action = True
 
   def get_current_frame(self):
     return self.current_frame if self.current_frame is not None else None
   
   def predict_gesture(self):
-    return self.gesture.predict_label(self.current_frame)
+    check1, check2 = self.gesture.predict_label(self.predict_frame)
+    if check1 and check2:
+      self.cam_action = False
+    return check1, check2
   
   def fix_cor_label(self):
+    self.cam_action = True
     return self.gesture.fix_cor_label()
   
   def get_hint_path(self):
@@ -27,14 +33,14 @@ class Camera:
   def open(self):
     self.running = True
     self.end = False
-    self.cap = cv2.VideoCapture(0)
+    self.cap = cv2.VideoCapture(1) # './gesture/sample.mp4'
     self.thread = threading.Thread(target=self.run)
     self.thread.start()
     return self.gesture.get_cor_label()
 
   def close(self):
     self.running = False
-    while not (self.end):
+    while not self.end:
       time.sleep(0.1)
     if self.thread:
       self.thread.join()
@@ -44,12 +50,11 @@ class Camera:
     return self.gesture.get_result()
 
   def run(self):
-    print('opening')
     while self.running:
-      ret, frame = self.cap.read()
-      if not ret:
-        print('closing')
-        break
-      self.current_frame = frame
+      if self.cam_action:
+        ret, frame = self.cap.read()
+        if ret:
+          self.current_frame = cv2.resize(frame, (600, 300))
+          self.predict_frame = frame
     self.cap.release()
     self.end = True
