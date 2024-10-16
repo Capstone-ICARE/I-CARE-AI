@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 # 데이터 로드
-data = np.load('./action_recognition/preprocessed_data.npz', allow_pickle=True)
+data = np.load('./action_recognition/preprocessed_data_test05.npz', allow_pickle=True)
 X = data['data']  # 입력 데이터
 y = data['labels']  # 라벨
 
@@ -58,14 +58,14 @@ except ValueError as e:
 
 # 모델 정의
 model = Sequential([
-    LSTM(128, return_sequences=True, input_shape=(30, 52)),
-    #Dropout(0.3),  
+    LSTM(128, return_sequences=True, input_shape=(20, 52)),
+    Dropout(0.3),  
     
     LSTM(128, return_sequences=True),
-    #Dropout(0.3),  
-    
+    Dropout(0.3),  
+
     LSTM(64, return_sequences=False),
-    #Dropout(0.3),  
+    Dropout(0.3),  
     
     Dense(64, activation='relu'),
     Dropout(0.4), 
@@ -94,12 +94,13 @@ model.summary()
 # 모델 훈련
 history = model.fit(X_train, y_train,
                     validation_data=(X_test, y_test),  
-                    epochs=60, 
-                    batch_size=32,  
-                    callbacks=[early_stopping])  
+                    epochs=30, 
+                    batch_size=64,  
+                    callbacks=[early_stopping]
+                    )  
 
 
-model_path = './action_recognition/action_recognition_model_TEST1.h5'
+model_path = './action_recognition/action_recognition_model_test05.h5'
 model.save(model_path)
 
 
