@@ -1,5 +1,24 @@
+# # Ignore virtual environment directory
+# myenv/
+
+# # Ignore YOLO weights and other large files
+# *.weights
+# *.pyd
+
+# .npz
+
+# # Data
+# data/
+
+# #Images
+# images/
+# webcam.py
+
+
 # Ignore virtual environment directory
 myenv/
+venv/
+__pycache__/
 
 # Ignore YOLO weights and other large files
 *.weights
@@ -11,4 +30,12 @@ data/
 #Images
 images/
 
+temporary/gesture_data/data_npz/
+temporary/gesture_data/images/
+
 webcam.py
+
+kobert/
+cc.ko.300.bin
+
+*.mp4

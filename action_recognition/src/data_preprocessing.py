@@ -204,6 +204,17 @@ def main():
     'M099_F105_38_02-06.mp4' : '격려하기',
     'M099_F105_38_02-07.mp4' : '격려하기',
     'M099_F105_38_02-08.mp4' : '격려하기',
+    'pat1.mov' : '격려하기',
+    'pat2.mov' : '격려하기',
+    'pat3.mov' : '격려하기',
+    'pat4.mov' : '격려하기',
+    'pat5.mov' : '격려하기',
+    'pat6.mov' : '격려하기',
+    'pat7.mov' : '격려하기',
+    'pat8.mov' : '격려하기',
+    'pat9.mov' : '격려하기',
+    'pat10.mov' : '격려하기',
+    'pat11.mov' : '격려하기',
 
     '(1)M099_F105_39_04-01.mp4': '혼내기',
     '(1)M099_F105_39_04-03.mp4': '혼내기',
@@ -227,6 +238,13 @@ def main():
     'M099_F105_39_02-06.mp4':'혼내기',
     'M099_F105_39_02-07.mp4':'혼내기',
     'M099_F105_39_02-08.mp4':'혼내기',
+    'M099_F105_39_02-08.mp4':'혼내기',
+    'scold1.mov':'혼내기',
+    'scold2.mov':'혼내기',
+    'scold3.mov':'혼내기',
+    'scold4.mov':'혼내기',
+    'scold5.mov':'혼내기',
+    'scold6.mov':'혼내기',
 
     '(1)M099_F105_36_02-01.mp4':'Neutral',
     '(1)M099_F105_36_02-02.mp4':'Neutral',
@@ -260,10 +278,12 @@ def main():
     'M099_F105_28_03-06.mp4':'Neutral',
     'M099_F105_28_03-07.mp4':'Neutral',
     'M099_F105_28_03-08.mp4':'Neutral',
+    'neutral1.mov':'Neutral',
+    'neutral2.mov':'Neutral',
 
     }                        
 
-    sequence_length = 30                       
+    #sequence_length = 30                       
 
     # 비디오 파일 디렉토리 경로
     video_dir = './action_recognition/data/videos'  
@@ -283,15 +303,15 @@ def main():
     # json_data = json_data.tolist()
     # json_data = json_data * 30
     #json_data = np.array(json_data)
-    json_data = np.repeat(json_data[:, np.newaxis, :], 30, axis=1)
-    print(f"JSON Data shape: {json_data.shape}")
+    # json_data = np.repeat(json_data[:, np.newaxis, :], 30, axis=1)
+    # print(f"JSON Data shape: {json_data.shape}")
 
-    combined_data = np.concatenate((json_data, video_data), axis=0)
-    combined_labels = np.concatenate((json_labels, video_labels), axis=0)
+    # combined_data = np.concatenate((json_data, video_data), axis=0)
+    # combined_labels = np.concatenate((json_labels, video_labels), axis=0)
 
     # 데이터 저장
-    np.savez_compressed('./action_recognition/preprocessed_data.npz', data=combined_data, labels=combined_labels)
-    print("Combined data saved to ./action_recognition/preprocessed_data.npz")
+    np.savez_compressed('./action_recognition/preprocessed_data_test05.npz', data=video_data, labels=video_labels)
+    print("Combined data saved to ./action_recognition/preprocessed_data_test05.npz")
 
 # 디렉토리 생성 함수
 def create_directories():
@@ -358,6 +378,54 @@ def map_keypoints(old_keypoints, keypoint_mapping):
         print("Unsupported keypoints format")
     return new_keypoints
 
+def get_augment_data(keypoints_sequence, w, h):
+    transformations = [
+        # (rotate_keypoints, {"angle": 30, "width": w, "height": h}),
+        (scale_keypoints, {"scale_x": 1.2, "scale_y": 1.2}),
+        (translate_keypoints, {"tx": 10, "ty": -10}),
+        (flip_keypoints_horizontal, {"width": w})
+    ]
+    augmented_data = []
+    augmented_data.append(keypoints_sequence)
+    for transform, params in transformations:
+        keypoints_seq = []
+        for (p1, p2) in keypoints_sequence: # [({'Nose': [x, y], 'LeftArm': [x, y], ...}, {}), ({}, {}), ({}, {})...]
+            person1 = {}
+            person2 = {}
+            for key, keypoints in p1.items():
+                person1[key] = transform(keypoints, **params)
+            for key, keypoints in p2.items():
+                person2[key] = transform(keypoints, **params)
+            added_keypoints = (person1, person2)
+            keypoints_seq.append(added_keypoints)
+        augmented_data.append(keypoints_seq)
+    return augmented_data # 5개의 keypoints_sequence
+
+def rotate_point(x, y, angle, cx, cy):
+    radians = np.deg2rad(angle)
+    cos_theta = np.cos(radians)
+    sin_theta = np.sin(radians)
+    
+    x -= cx
+    y -= cy
+    
+    x_new = x * cos_theta - y * sin_theta + cx
+    y_new = x * sin_theta + y * cos_theta + cy
+    
+    return [x_new, y_new]
+
+def rotate_keypoints(keypoints, angle, width, height): # 회전(-180~180) : 15, 30, 45, -30, -45
+    cx, cy = width // 2, height // 2
+    return rotate_point(keypoints[0], keypoints[1], angle, cx, cy)
+
+def scale_keypoints(keypoints, scale_x, scale_y): # 이미지 크기(0.5~2.0) : 0.8, 1.0(원본), 1.2, 1.5
+    return [keypoints[0] * scale_x, keypoints[1] * scale_y]
+
+def translate_keypoints(keypoints, tx, ty): # 이동(-20~20)
+    return [keypoints[0] + tx, keypoints[1] + ty]
+
+def flip_keypoints_horizontal(keypoints, width): # 좌우 반전
+    return [width - keypoints[0], keypoints[1]]
 
 # 데이터 증강 설정 (imgaug)
 # augmenter = iaa.Sequential([
@@ -368,7 +436,7 @@ def map_keypoints(old_keypoints, keypoint_mapping):
 # ])
 
 # extracting and mapping keypoints 
-def process_video(video_path, keypoint_mapping, sequence_length=30):
+def process_video(video_path, keypoint_mapping, sequence_length=20):
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)  # 비디오의 초당 프레임 수 (120)
     interval = max(1, int(fps/5)) # 초당 5프레임 처리
@@ -376,11 +444,11 @@ def process_video(video_path, keypoint_mapping, sequence_length=30):
     keypoints_sequence = [] # 각 프레임에서 추출된 매핑된 키포인트 저장
     frame_count = 0
 
-    while cap.isOpened() and len(keypoints_sequence) < sequence_length:
+    while cap.isOpened(): #and len(keypoints_sequence) < sequence_length
         ret, frame = cap.read()
         if not ret:
             break
-
+        temp_frame = frame
         # 매 'process_interval' 프레임마다 처리
         if frame_count % interval == 0:
             frame_keypoints = process_frame(frame, keypoint_mapping)
@@ -391,15 +459,23 @@ def process_video(video_path, keypoint_mapping, sequence_length=30):
 
     cap.release()
 
-    if len(keypoints_sequence) == 0:
-        return 0
-    # 시퀀스 길이 표준화
-    if len(keypoints_sequence) < sequence_length:
-        keypoints_sequence = pad_sequence(keypoints_sequence, sequence_length)
-    elif len(keypoints_sequence) > sequence_length:
-        keypoints_sequence = keypoints_sequence[:sequence_length]
+    
 
-    return keypoints_sequence
+    h, w = temp_frame.shape[:2]
+    augment_sequence_list = get_augment_data(keypoints_sequence, w, h)
+    new_sequence_list = []
+
+    for sequence in augment_sequence_list:
+        if len(sequence) == 0:
+            return 0
+        # 시퀀스 길이 표준화
+        for i in range(0, len(sequence), sequence_length):
+            chunk = sequence[i:i + sequence_length]
+            if len(chunk) < sequence_length:
+                for i in range(sequence_length - len(chunk)):
+                    chunk.append(chunk[-(i + 1)])
+            new_sequence_list.append(chunk)
+    return new_sequence_list
 
 
 def process_frame(frame, keypoint_mapping):
@@ -454,7 +530,7 @@ def process_frame(frame, keypoint_mapping):
                     cv2.circle(person_img, (cx, cy), 5, (0, 255, 0), -1)
 
         # Display results
-        cv2.imshow('Keypoints Visualization', frame)
+        # cv2.imshow('Keypoints Visualization', frame)
         if cv2.waitKey(5) & 0xFF == ord('q'):
             break
 
@@ -486,7 +562,7 @@ def process_videos(video_dir, keypoint_mapping, video_labels):
     # ]
 
     # 비디오 파일 목록
-    video_files = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]
+    video_files = [f for f in os.listdir(video_dir) if f.endswith('.mp4')]#if f.endswith('.mp4', '.mov')
     #video_files = [f for f in os.listdir(video_dir) if f in target_videos]
 
 
@@ -495,22 +571,27 @@ def process_videos(video_dir, keypoint_mapping, video_labels):
         print(f"Processing video: {video_path}")
 
         # 비디오에서 키포인트 추출
-        sequence = process_video(video_path, keypoint_mapping, sequence_length=30)
-        if sequence == 0:
+        sequence_list = process_video(video_path, keypoint_mapping, sequence_length=20)
+        if sequence_list == 0:
             continue
-
         # 라벨 추출
         label = video_labels.get(video_file, 'unknown')  # video_labels 딕셔너리에서 라벨을 가져옴
-
-        # 키포인트와 라벨 저장
-        all_sequences.append(sequence)
-        all_labels.append(label)
+        if isinstance(sequence_list, list):
+            print("리스트")
+        else:
+            print("sequence_list가 리스트가 아닙니다:", type(sequence_list))
+        for sequence in sequence_list:
+            if len(sequence) == 0:
+                continue
+            # 키포인트와 라벨 저장
+            all_sequences.append(sequence)
+            all_labels.append(label)
 
     return np.array(all_sequences), np.array(all_labels)
 
 
 
-def load_and_preprocess_data(json_dir, keypoint_mapping, target_files, sequence_length=30):
+def load_and_preprocess_data(json_dir, keypoint_mapping, target_files, sequence_length=20):
     data = []
     labels = []
 
@@ -548,8 +629,11 @@ def load_and_preprocess_data(json_dir, keypoint_mapping, target_files, sequence_
                             # keypoint_values = np.array(list(new_keypoints.values()))
                             data_tuple = data_tuple + (new_keypoints, )
                     if len(data_tuple) == 2:
-                        data.append(data_tuple)
-                        labels.append(sub_category)
+                        sequence_list = get_augment_data([data_tuple], 1920, 1080)
+                        for sequence in sequence_list:
+                            tup = sequence[0]
+                            data.append(tup)
+                            labels.append(sub_category)
                 except json.JSONDecodeError as e:
                     print(f"Error decoding JSON in file {file_path}: {e}")
                 except KeyError as e:
@@ -565,7 +649,6 @@ if __name__ == "__main__":
     #create_directories()
 
     
-
 
 
 
