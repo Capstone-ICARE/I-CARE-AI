@@ -11,13 +11,13 @@ class Gesture:
     self.gesture_label_encoder = gesture_label_encoder
     self.desired_landmarks = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
     self.labels = {
-      '옆구리 늘리기': 'hint.jpg',
-      '마주보고 두 손바닥 맞대기': 'normal.jpg',
-      '서로 등지고 양손잡고 잡아당기기': 'answer.jpg',
-      '정면보고 손잡고 발바닥 맞대기': 'gesture04.jpg',
+      '옆구리 늘리기': 'gesture0.jpg',
+      '마주보고 두 손바닥 맞대기': 'gesture02.jpg',
+      '서로 등지고 양손잡고 잡아당기기': 'gesture03.jpg',
+      '정면보고 손잡고 발바닥 맞대기': 'gesture0.jpg',
       '마주보고 손잡고 발목잡고 뒤로 당기기': 'gesture05.jpg',
-      '손 잡고 만세하기': 'answer.jpg',
-      '인사하기': 'hint.jpg',
+      '손 잡고 만세하기': 'gesture06.jpg',
+      '인사하기': 'gesture0.jpg',
     }
     self.cor_label = random.choice(list(self.labels.keys()))
     self.check = False
