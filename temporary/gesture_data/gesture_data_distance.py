@@ -71,8 +71,8 @@ def normalize_by_left_hip(persons):
   return normalized_persons
 
 desired_landmarks = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
-#datas = np.load('./gesture_data/data_npz/main/data_gesture_all_main.npz', allow_pickle=True)
-datas = np.load('./gesture_data/data_npz/data_gesture_all_handmade.npz', allow_pickle=True)
+datas = np.load('./gesture_data/data_npz/main/data_gesture_all_main.npz', allow_pickle=True)
+#datas = np.load('./gesture_data/data_npz/data_gesture_all_handmade.npz', allow_pickle=True)
 keypoints = datas['data']
 labels = datas['labels']
 
@@ -127,7 +127,7 @@ print(f"Labels shape: {np.array(labels).shape}")
 
 #np.savez_compressed('./gesture_data/data_npz/main/data_gesture_new_main10.npz', keypoints=save_keypoints, angles=save_angles, labels=labels)
 
-np.savez_compressed('./gesture_data/data_npz/main/data_gesture_new_main12.npz', keypoints=save_keypoints, labels=labels)
+np.savez_compressed('./gesture_data/data_npz/main/data_gesture_new_main13.npz', keypoints=save_keypoints, labels=labels)
 
 
 # 모델 학습 잘 안되면 팔, 다리 각도 추가

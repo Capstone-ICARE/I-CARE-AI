@@ -8,6 +8,7 @@ class Camera:
     self.gesture = Gesture(pose, yolo_model, gesture_model, gesture_label_encoder)
     self.running = False
     self.thread = None
+    self.thread2 = None
     self.current_frame = None
     self.predict_frame = None
     self.cap = None
@@ -18,10 +19,13 @@ class Camera:
     return self.current_frame if self.current_frame is not None else None
   
   def predict_gesture(self):
-    check1, check2 = self.gesture.predict_label(self.predict_frame)
-    if check1 and check2:
-      self.cam_action = False
-    return check1, check2
+    if self.running and self.cam_action and self.predict_frame is not None:
+      check1, check2 = self.gesture.predict_label(self.predict_frame)
+      if check1 and check2:
+        self.cam_action = False
+      return check1, check2
+    else:
+      return None, None
   
   def fix_cor_label(self):
     self.cam_action = True
@@ -35,7 +39,9 @@ class Camera:
     self.end = False
     self.cap = cv2.VideoCapture(1) # './gesture/sample.mp4'
     self.thread = threading.Thread(target=self.run)
+    self.thread2 = threading.Thread(target=self.predict_gesture)
     self.thread.start()
+    self.thread2.start()
     return self.gesture.get_cor_label()
 
   def close(self):
@@ -45,6 +51,9 @@ class Camera:
     if self.thread:
       self.thread.join()
       self.thread = None
+    if self.thread2:
+      self.thread2.join()
+      self.thread2 = None
     self.current_frame = None
     self.cap.release()
     return self.gesture.get_result()

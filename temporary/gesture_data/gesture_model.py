@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.regularizers import l2
 import joblib
 
-data = np.load('./gesture_data/data_npz/main/data_gesture_new_main12.npz', allow_pickle=True)
+data = np.load('./gesture_data/data_npz/main/data_gesture_new_main13.npz', allow_pickle=True)
 X = data['keypoints']
 #X_angle = data['angles']
 y = data['labels']
@@ -152,8 +152,8 @@ loss, accuracy = model.evaluate(X_test, y_test)
 print(f'Loss: {loss}, Accuracy: {accuracy}')
 
 # 모델 저장
-model.save('./gesture_data/data_npz/main/gesture_new_model19.keras')
-joblib.dump(label_encoder, './gesture_data/data_npz/main/new_label_encoder_8.pkl')
+model.save('./gesture_data/data_npz/main/gesture_new_model20.keras')
+joblib.dump(label_encoder, './gesture_data/data_npz/main/new_label_encoder_9.pkl')
 
 
 '''

@@ -131,7 +131,7 @@ if __name__ == "__main__":
     './gesture_data/images/handmade/gesture06',
     './gesture_data/images/handmade/gesture07',
     #'./gesture_data/images/handmade/gesture08',
-    #'./gesture_data/images/neutral'
+    './gesture_data/images/neutral-x'
   ]
   json_directory = [
     './gesture_data/images/handmade/gesture01_json',
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     './gesture_data/images/handmade/gesture06_json',
     './gesture_data/images/handmade/gesture07_json',
     #'./gesture_data/images/handmade/gesture08_json',
-    #'./gesture_data/images/handmade/neutral_json'
+    './gesture_data/images/neutral_json-x'
   ]
   label = [
     '옆구리 늘리기',
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     '손 잡고 만세하기',
     '인사하기',
     #'준비 동작, 차렷!',
-    #'Neutral'
+    'Neutral'
   ]
   keypoint_file_name = './gesture_data/data_npz/data_gesture_all_handmade.npz'
 

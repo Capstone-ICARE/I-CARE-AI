@@ -24,19 +24,19 @@ def get_augment_data(keypoints, w, h):
     ]
     augmented_data = []
     augmented_data.append(keypoints)
-    for transform, params in transformations:
-        new_keypoints = []
-        for k in keypoints:
-            new_keypoints.append(transform(k, **params))
-        augmented_data.append(new_keypoints)
+    # for transform, params in transformations:
+    #     new_keypoints = []
+    #     for k in keypoints:
+    #         new_keypoints.append(transform(k, **params))
+    #     augmented_data.append(new_keypoints)
     
     flipped_keypoints = [flip_keypoints_horizontal(k, width=w) for k in keypoints]
     augmented_data.append(flipped_keypoints)
-    for transform, params in transformations:
-        new_keypoints = []
-        for k in flipped_keypoints:
-            new_keypoints.append(transform(k, **params))
-        augmented_data.append(new_keypoints)
+    # for transform, params in transformations:
+    #     new_keypoints = []
+    #     for k in flipped_keypoints:
+    #         new_keypoints.append(transform(k, **params))
+    #     augmented_data.append(new_keypoints)
     return augmented_data # 6개의 keypoints
 
 def rotate_point(x, y, angle, cx, cy):
@@ -129,18 +129,17 @@ def process_image_list(directory, label):
     all_keypoints = []
     all_labels = []
 
-    for _ in range(3):
-        for filename in os.listdir(directory):
-            if filename.endswith(('.jpg', '.jpeg', '.png')) :
-                image_path = os.path.join(directory, filename)
-                keypoints = process_image(image_path)
+    for filename in os.listdir(directory):
+        if filename.endswith(('.jpg', '.jpeg', '.png')) :
+            image_path = os.path.join(directory, filename)
+            keypoints = process_image(image_path)
 
-                if keypoints != []:
-                    #label = image_labels.get(filename, 'Neutral')
-                    augmented_keypoints = get_augment_data(keypoints, my_w, my_h)
-                    for kp in augmented_keypoints:
-                        all_keypoints.append(kp) # [(x, y), (x, y), (x, y), (x, y), ...]
-                        all_labels.append(label)
+            if keypoints != []:
+                #label = image_labels.get(filename, 'Neutral')
+                augmented_keypoints = get_augment_data(keypoints, my_w, my_h)
+                for kp in augmented_keypoints:
+                    all_keypoints.append(kp) # [(x, y), (x, y), (x, y), (x, y), ...]
+                    all_labels.append(label)
 
     return np.array([np.array(kp) for kp in all_keypoints]), np.array(all_labels)
 
@@ -153,7 +152,8 @@ if __name__ == "__main__":
     label = [
         #'마주보고 두 손바닥 맞대기',
         #'서로 등지고 양손잡고 잡아당기기',
-        '준비 동작, 차렷!'
+        #'준비 동작, 차렷!'
+        'Neutral'
     ]
     keypoint_file_name = './gesture_data/data_npz/data_gesture_all_original.npz'
 

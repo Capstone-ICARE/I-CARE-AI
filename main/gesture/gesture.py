@@ -51,13 +51,18 @@ class Gesture:
   def predict_label(self, current_frame):
     #directory = './gesture/images'
     directory = './static/gesture'
+    threshold = 0.6
     frame_keypoints = self.process_frame(current_frame)
     if frame_keypoints == []:
       return self.increment_check_count()
-    X_keypoints = np.array([np.array(frame_keypoints).flatten()])
-    prediction = self.gesture_model.predict(X_keypoints)
-    predicted_label = self.gesture_label_encoder.inverse_transform([np.argmax(prediction)])[0]
-    print(predicted_label)
+    X_new_keypoints = self.fix_keypoints(frame_keypoints)
+    predictions = self.gesture_model.predict(np.expand_dims(X_new_keypoints, axis=0))
+    max_prob = np.max(predictions)
+    if max_prob < threshold:
+      predicted_label = 'Neutral'
+    else:
+      predicted_label = self.gesture_label_encoder.inverse_transform([np.argmax(predictions, axis=1)])[0]
+    print(f'Predicted Label: {predicted_label}, (Confidence: {round(max_prob, 3)})')
     if self.cor_label == predicted_label:
       if self.check:
         frame_path = self.generate_unique_filename(directory)
@@ -87,6 +92,19 @@ class Gesture:
       if not os.path.exists(file_path):
         return file_path
       
+  def fix_keypoints(self, keypoints):
+    normalized_keypoints = []
+    person1_keypoints = np.array(keypoints[:13])
+    person2_keypoints = np.array(keypoints[13:])
+    combined_vector = np.concatenate([person1_keypoints.flatten(), person2_keypoints.flatten()])
+    left_shoulder = person1_keypoints[1]
+    right_shoulder = person1_keypoints[2]
+    shoulder_distance = np.linalg.norm(right_shoulder - left_shoulder)
+    for i in range(0, 52, 2):
+      new_keypoints = ((combined_vector[i], combined_vector[i+1]) - left_shoulder) / shoulder_distance
+      normalized_keypoints.extend([new_keypoints[0], new_keypoints[1]])
+    return np.array(normalized_keypoints)
+      
   def process_frame(self, current_frame):
     W, H = 640, 640
     keypoints = []
@@ -95,16 +113,15 @@ class Gesture:
     image_resized_original = image_resized.copy()
 
     detections = self.yolo_model(image_resized).pred[0]
-    people_detected = 0
     people_with_pose = 0
 
     for det in detections:
+      if people_with_pose >= 2:
+        break
       if det[5] == 0:
-        people_detected += 1
         x1, y1, x2, y2 = map(int, det[:4])
 
-        new_x1, new_y1, new_x2, new_y2 = max(0, x1 - 25), max(0, y1 - 15), min(W, x2 + 25), min(H, y2 + 15)
-        person_img = image_resized_original[new_y1:new_y2, new_x1:new_x2]
+        person_img = image_resized_original[y1:y2, x1:x2]
         person_rgb = cv2.cvtColor(person_img, cv2.COLOR_BGR2RGB)
         pose_result = self.pose.process(person_rgb)
 
@@ -112,12 +129,12 @@ class Gesture:
           people_with_pose += 1
           for idx in self.desired_landmarks:
             landmark = pose_result.pose_landmarks.landmark[idx]
-            w, h = new_x2 - new_x1, new_y2 - new_y1
+            h, w, _ = person_img.shape
             x, y = int(landmark.x * w), int(landmark.y * h)
-            keypoints.append((new_x1 + x, new_y1 + y))
+            keypoints.append((x1 + x, y1 + y))
 
-    if people_detected == 2 and people_with_pose == 2:
-        return keypoints
+    if people_with_pose == 2:
+      return keypoints
     else:
-        #print(f"X, {people_detected}, {people_with_pose}")
-        return []
+      #print(f"X, {people_detected}, {people_with_pose}")
+      return []

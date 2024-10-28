@@ -8,7 +8,7 @@ import cv2
 import time
 import json
 import joblib
-from profile.profile import Profile
+from profile_wc.profile_wc import Profile
 from icon.icon import Icon
 from video.video import Video
 from gesture.camera import Camera
@@ -26,8 +26,8 @@ yolo_model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-gesture_model = load_model('./gesture/model/gesture_model_01.h5')
-gesture_label_encoder = joblib.load('./gesture/model/label_encoder.pkl')
+gesture_model = load_model('./gesture/model/gesture_new_model20.keras')
+gesture_label_encoder = joblib.load('./gesture/model/new_label_encoder_9.pkl')
 
 # 기본 라우트 정의
 @app.route('/profile', methods=['POST'])
@@ -181,7 +181,7 @@ def get_hint_image():
             return send_file(hint_path, mimetype='image/jpeg')
         else:
             return "Hint image not found", 404
-
+'''
 @app.route('/gesture/predict', methods=['GET'])
 def get_gesture_predict():
     child_id = request.args.get('childId')
@@ -189,6 +189,18 @@ def get_gesture_predict():
     if camera:
         check1, check2 = camera.predict_gesture()
         return jsonify({'check1': check1, 'check2': check2}), 200
+'''    
+@app.route('/gesture/predict', methods=['GET'])
+def get_gesture_predict():
+    child_id = request.args.get('childId')
+    camera = child_cameras.get(child_id)
+    def generate(camera):
+        if camera:
+            while camera.running:
+                check1, check2 = camera.predict_gesture()
+                if check1 is not None or check2 is not None:
+                    yield f"data:{json.dumps({'check1': check1, 'check2': check2})}\n\n"
+    return Response(generate(camera), mimetype='text/event-stream')
 
 @app.route('/gesture/stream', methods=['GET'])
 def get_camera_stream():
@@ -222,6 +234,6 @@ def get_gesture_image():
 if __name__ == '__main__':
     profile = Profile()
     icon = Icon()
-    app.run(debug=True)
+    app.run(port=5050, debug=True)
     
 # https://huggingface.co/monologg/kobert/tree/main
