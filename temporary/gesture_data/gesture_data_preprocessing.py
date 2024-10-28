@@ -20,8 +20,7 @@ def get_augment_data(keypoints, w, h):
     transformations = [
         #(rotate_keypoints, {"angle": 30, "width": w, "height": h}),
         (scale_keypoints, {"scale_x": 1.2, "scale_y": 1.2}),
-        (translate_keypoints, {"tx": 10, "ty": -10}),
-        (flip_keypoints_horizontal, {"width": w})
+        (translate_keypoints, {"tx": 10, "ty": -10})
     ]
     augmented_data = []
     augmented_data.append(keypoints)
@@ -30,7 +29,15 @@ def get_augment_data(keypoints, w, h):
         for k in keypoints:
             new_keypoints.append(transform(k, **params))
         augmented_data.append(new_keypoints)
-    return augmented_data # 5개의 keypoints
+    
+    flipped_keypoints = [flip_keypoints_horizontal(k, width=w) for k in keypoints]
+    augmented_data.append(flipped_keypoints)
+    for transform, params in transformations:
+        new_keypoints = []
+        for k in flipped_keypoints:
+            new_keypoints.append(transform(k, **params))
+        augmented_data.append(new_keypoints)
+    return augmented_data # 6개의 keypoints
 
 def rotate_point(x, y, angle, cx, cy):
     radians = np.deg2rad(angle)
@@ -110,9 +117,9 @@ def process_image(image_path):
 
     if people_detected == 2 and people_with_pose == 2:
         print(f'주의: {image_path}')
-        cv2.imshow('Detected Pose', image_resized)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow('Detected Pose', image_resized)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
         return keypoints
     else:
         #print(f"X: {image_path}, {people_detected}, {people_with_pose}")
@@ -122,28 +129,42 @@ def process_image_list(directory, label):
     all_keypoints = []
     all_labels = []
 
-    for filename in os.listdir(directory):
-        if filename.endswith(('.jpg', '.jpeg', '.png')) :
-            image_path = os.path.join(directory, filename)
-            keypoints = process_image(image_path)
+    for _ in range(3):
+        for filename in os.listdir(directory):
+            if filename.endswith(('.jpg', '.jpeg', '.png')) :
+                image_path = os.path.join(directory, filename)
+                keypoints = process_image(image_path)
 
-            if keypoints != []:
-                #label = image_labels.get(filename, 'Neutral')
-                augmented_keypoints = get_augment_data(keypoints, my_w, my_h)
-                for kp in augmented_keypoints:
-                    all_keypoints.append(kp) # [(x, y), (x, y), (x, y), (x, y), ...]
-                    all_labels.append(label)
+                if keypoints != []:
+                    #label = image_labels.get(filename, 'Neutral')
+                    augmented_keypoints = get_augment_data(keypoints, my_w, my_h)
+                    for kp in augmented_keypoints:
+                        all_keypoints.append(kp) # [(x, y), (x, y), (x, y), (x, y), ...]
+                        all_labels.append(label)
 
-    return np.array([np.array(kp).flatten() for kp in all_keypoints]), np.array(all_labels)
+    return np.array([np.array(kp) for kp in all_keypoints]), np.array(all_labels)
 
 if __name__ == "__main__":
-    #directory = './images/gesture01'
-    directory = './gesture_data/images/gesture04'
-    label = '마주보고 손바닥 맞대고 발 뒤로 들기'
-    keypoint_file_name = './gesture_data/data_npz/data_gesture_04_original.npz'
-    #keypoint_file_name = './data_npz/data_gesture_01.npz'
+    directory = [
+        #'./gesture_data/images/gesture02',
+        #'./gesture_data/images/gesture03',
+        './gesture_data/images/gesture08'
+    ]
+    label = [
+        #'마주보고 두 손바닥 맞대기',
+        #'서로 등지고 양손잡고 잡아당기기',
+        '준비 동작, 차렷!'
+    ]
+    keypoint_file_name = './gesture_data/data_npz/data_gesture_all_original.npz'
 
-    datas, labels = process_image_list(directory, label)
-    print(f"Data shape: {datas.shape}")
-    print(f"Labels shape: {labels.shape}")
-    np.savez_compressed(keypoint_file_name, data=datas, labels=labels)
+    all_datas = []
+    all_labels = []
+    for i in range(0, len(directory)):
+        datas, labels = process_image_list(directory[i], label[i])
+        all_datas.append(datas)
+        all_labels.append(labels)
+    combined_datas = np.concatenate(all_datas, axis=0)
+    combined_labels = np.concatenate(all_labels, axis=0)
+    print(f"Data shape: {combined_datas.shape}")
+    print(f"Labels shape: {combined_labels.shape}")
+    np.savez_compressed(keypoint_file_name, data=combined_datas, labels=combined_labels)

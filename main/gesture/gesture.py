@@ -14,12 +14,10 @@ class Gesture:
       '옆구리 늘리기': 'hint.jpg',
       '마주보고 두 손바닥 맞대기': 'normal.jpg',
       '서로 등지고 양손잡고 잡아당기기': 'answer.jpg',
-      '마주보고 손바닥 맞대고 발 뒤로 들기': 'gesture04.jpg',
-      '등 맞대고 앉기(스쿼트)': 'gesture05.jpg',
-      '정면보고 손잡고 발바닥 맞대기': 'answer.jpg',
-      '안마하기': 'hint.jpg',
-      '마주보고 손잡고 발목잡고 뒤로 당기기': 'normal.jpg',
-      #'팔하트': 'answer.jpg'
+      '정면보고 손잡고 발바닥 맞대기': 'gesture04.jpg',
+      '마주보고 손잡고 발목잡고 뒤로 당기기': 'gesture05.jpg',
+      '손 잡고 만세하기': 'answer.jpg',
+      '인사하기': 'hint.jpg',
     }
     self.cor_label = random.choice(list(self.labels.keys()))
     self.check = False
@@ -44,7 +42,7 @@ class Gesture:
   
   def get_hint_path(self):
     #directory = './gesture/images/hint'
-    directory = './images/gesture/hint'
+    directory = './static/gesture/hint'
     hint_image = self.labels[self.cor_label]
     hint_path = os.path.join(directory, hint_image)
     if os.path.exists(hint_path):
@@ -52,7 +50,7 @@ class Gesture:
 
   def predict_label(self, current_frame):
     #directory = './gesture/images'
-    directory = './images/gesture'
+    directory = './static/gesture'
     frame_keypoints = self.process_frame(current_frame)
     if frame_keypoints == []:
       return self.increment_check_count()

@@ -19,7 +19,6 @@ class Gesture:
       '정면보고 손잡고 발바닥 맞대기': 'answer.jpg',
       '안마하기': 'hint.jpg',
       '마주보고 손잡고 발목잡고 뒤로 당기기': 'normal.jpg',
-      '팔하트': 'answer.jpg'
     }
     self.cor_label = random.choice(list(self.labels.keys()))
     self.check = False

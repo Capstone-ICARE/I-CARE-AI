@@ -55,7 +55,7 @@ def process_image_list(image_keypoints, image_labels):
             all_keypoints.append(kp) # [(x, y), (x, y), (x, y), (x, y), ...]
             all_labels.append(label)
 
-    return np.array([np.array(kp).flatten() for kp in all_keypoints]), np.array(all_labels)
+    return np.array([np.array(kp) for kp in all_keypoints]), np.array(all_labels)
 
 if __name__ == "__main__":
     image_labels = {

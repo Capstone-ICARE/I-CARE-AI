@@ -38,7 +38,7 @@ class Video:
         if predicted_labels and video_frames:
             print(f'Predicted Labels: {predicted_labels}')
             #directory = './video/datamodel/images'
-            directory = './images/video'
+            directory = './static/video'
             temp_label = ''
             for i, label in enumerate(predicted_labels):
                 if temp_label != label:

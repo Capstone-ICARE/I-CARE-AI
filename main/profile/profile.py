@@ -29,7 +29,7 @@ class Profile:
         
             wc = WordCloud(fontPath, background_color='white', width=400, height=300, max_words=25)
             profile = wc.generate_from_frequencies(wordCount)
-            profile.to_file('./images/profile/' + file_name)
+            profile.to_file('./static/profile/' + file_name)
     
             return True
         except:

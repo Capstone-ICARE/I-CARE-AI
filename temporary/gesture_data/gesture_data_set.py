@@ -57,7 +57,7 @@ def process_image_list(already_set_keypoints):
                 all_keypoints.append(keypoints) # [(x, y), (x, y), (x, y), (x, y), ...]
                 print(f"'{filename}' : {keypoints},")
 
-    return np.array([np.array(kp).flatten() for kp in all_keypoints])
+    return np.array([np.array(kp) for kp in all_keypoints])
 
 if __name__ == "__main__":
     already_set_keypoints = [
